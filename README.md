@@ -1,2 +1,2 @@
-# Kubernetes_Cdac_Project
-Automated Kubernetes cluster setup using Ansible and kubeadm on Ubuntu Linux with DCDR, persistent storage, and monitoring using Prometheus and Grafana
+# Kubernetes-Cluster-Setup-Monitoring-with-Prometheus-and-Automation-Using-Ansible
+Designed an automated Kubernetes cluster using Ansible and kubeadm on Ubuntu Linux, enabling platform-level DCDR through Kubernetes self-healing, pod restarts, replica management, and workload rescheduling. Implemented persistent storage using TrueNAS (NFS) with PV/PVC and monitored the cluster using Prometheus and Grafana.
