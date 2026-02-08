@@ -1,2 +1,5 @@
 # Kubernetes-Cluster-Setup-Monitoring-with-Prometheus-and-Automation-Using-Ansible
-Designed an automated Kubernetes cluster using Ansible and kubeadm on Ubuntu Linux, enabling platform-level DCDR through Kubernetes self-healing, pod restarts, replica management, and workload rescheduling. Implemented persistent storage using TrueNAS (NFS) with PV/PVC and monitored the cluster using Prometheus and Grafana.
+Built an automated Kubernetes cluster on Ubuntu using Ansible and kubeadm, featuring self-healing and disaster recovery. 
+Configured persistent storage for Nginx via TrueNAS and NFS. 
+Integrated kube-scan for automated security risk assessment and centralized all monitoring and security data into Prometheus and Grafana for real-time
+visualization and alerting.
