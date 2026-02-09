@@ -1,3 +1,4 @@
+#kubernates
 ---
 - name: Check if Helm is installed
   command: which helm
