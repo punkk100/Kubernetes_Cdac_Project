@@ -1,0 +1,44 @@
+# Ansible
+*.retry
+.ansible/
+*.log
+ansible_facts/
+
+# Kubernetes
+*.kubeconfig
+admin.conf
+*.pem
+*.key
+*.crt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+secrets/
+*.secret
+.env
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
