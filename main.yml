@@ -1,0 +1,139 @@
+---
+- name: Check if Helm is installed
+  command: which helm
+  register: helm_check
+  changed_when: false
+  failed_when: false
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+- name: Install Helm if not present
+  shell: |
+    curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  when: helm_check.rc != 0
+  args:
+    creates: /usr/local/bin/helm
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Verify Helm installation
+  command: helm version --short
+  register: helm_version
+  changed_when: false
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Add ingress-nginx Helm repository
+  kubernetes.core.helm_repository:
+    name: ingress-nginx
+    repo_url: https://kubernetes.github.io/ingress-nginx
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path | default('/root/.kube/config') }}"
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Update Helm repositories
+  command: helm repo update
+  changed_when: false
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path | default('/root/.kube/config') }}"
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Create ingress-nginx namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: ingress-nginx
+        labels:
+          app.kubernetes.io/name: ingress-nginx
+    kubeconfig: "{{ kubeconfig_path | default('/root/.kube/config') }}"
+
+- name: Install NGINX Ingress Controller
+  kubernetes.core.helm:
+    name: ingress-nginx
+    chart_ref: ingress-nginx/ingress-nginx
+    release_namespace: ingress-nginx
+    create_namespace: false
+    kubeconfig: "{{ kubeconfig_path | default('/root/.kube/config') }}"
+    wait: true
+    wait_timeout: "600s"
+    values:
+      controller:
+        replicaCount: 1
+        service:
+          type: LoadBalancer
+          externalTrafficPolicy: Local
+        metrics:
+          enabled: true
+          serviceMonitor:
+            enabled: true
+            namespace: monitoring
+            additionalLabels:
+              release: monitoring
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        config:
+          use-forwarded-headers: "true"
+          compute-full-forwarded-for: "true"
+          use-proxy-protocol: "false"
+  register: ingress_install
+  retries: 3
+  delay: 10
+  until: ingress_install is succeeded
+
+- name: Wait for ingress-nginx controller deployment
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: ingress-nginx-controller
+    namespace: ingress-nginx
+    kubeconfig: "{{ kubeconfig_path | default('/root/.kube/config') }}"
+  register: ingress_deployment
+  until: >
+    ingress_deployment.resources | length > 0 and
+    ingress_deployment.resources[0].status.availableReplicas | default(0) > 0
+  retries: 30
+  delay: 10
+
+- name: Wait for ingress-nginx pods to be ready
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: ingress-nginx
+    kubeconfig: "{{ kubeconfig_path | default('/root/.kube/config') }}"
+    label_selectors:
+      - app.kubernetes.io/name=ingress-nginx
+      - app.kubernetes.io/component=controller
+  register: ingress_pods
+  until: >
+    ingress_pods.resources | 
+    selectattr('status.phase', 'equalto', 'Running') | 
+    list | length > 0
+  retries: 30
+  delay: 10
+
+- name: Get ingress-nginx service information
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    name: ingress-nginx-controller
+    namespace: ingress-nginx
+    kubeconfig: "{{ kubeconfig_path | default('/root/.kube/config') }}"
+  register: ingress_service
+
+- name: Display ingress service info
+  debug:
+    msg: |
+      Ingress NGINX installed successfully!
+      - Service Type: {{ ingress_service.resources[0].spec.type }}
+      - Ports: {{ ingress_service.resources[0].spec.ports | map(attribute='port') | list }}
+      - Status: Run 'kubectl get svc -n ingress-nginx' to check LoadBalancer status
+      - Metrics enabled for Prometheus scraping
+
