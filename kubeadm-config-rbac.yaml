@@ -1,0 +1,28 @@
+# Allow bootstrap tokens to read kubeadm-config for joining.
+# See: configmaps "kubeadm-config" forbidden User "system:bootstrap:..."
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kubeadm:get-kubeadm-config
+  namespace: kube-system
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["kubeadm-config"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kubeadm:get-kubeadm-config
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kubeadm:get-kubeadm-config
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    # This group is included in the bootstrap token's authenticated groups
+    name: system:bootstrappers:kubeadm:default-node-token
